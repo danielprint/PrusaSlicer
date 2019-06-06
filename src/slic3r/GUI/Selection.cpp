@@ -1890,25 +1890,58 @@ bool Selection::is_from_fully_selected_instance(unsigned int volume_idx) const
 
 void Selection::paste_volumes_from_clipboard()
 {
-    int obj_idx = get_object_idx();
-    if ((obj_idx < 0) || ((int)m_model->objects.size() <= obj_idx))
+    int dst_obj_idx = get_object_idx();
+    if ((dst_obj_idx < 0) || ((int)m_model->objects.size() <= dst_obj_idx))
         return;
+
+#if ENABLE_FIX_GITHUB_2428
+    ModelObject* dst_object = m_model->objects[dst_obj_idx];
+
+    int dst_inst_idx = get_instance_idx();
+    if ((dst_inst_idx < 0) || ((int)dst_object->instances.size() <= dst_inst_idx))
+        return;
+#endif // ENABLE_FIX_GITHUB_2428
 
     ModelObject* src_object = m_clipboard.get_object(0);
     if (src_object != nullptr)
     {
-        ModelObject* dst_object = m_model->objects[obj_idx];
+#if ENABLE_FIX_GITHUB_2428
+        ModelInstance* dst_instance = dst_object->instances[dst_inst_idx];
+        BoundingBoxf3 dst_instance_bb = dst_object->instance_bounding_box(dst_inst_idx);
+        Transform3d src_matrix = src_object->instances[0]->get_transformation().get_matrix(true);
+        Transform3d dst_matrix = dst_instance->get_transformation().get_matrix(true);
+        bool from_same_object = src_matrix.isApprox(dst_matrix);
+#else
+        ModelObject* dst_object = m_model->objects[dst_obj_idx];
+#endif // ENABLE_FIX_GITHUB_2428
 
         ModelVolumePtrs volumes;
         for (ModelVolume* src_volume : src_object->volumes)
         {
             ModelVolume* dst_volume = dst_object->add_volume(*src_volume);
             dst_volume->set_new_unique_id();
+#if ENABLE_FIX_GITHUB_2428
+            if (from_same_object)
+            {
+                // if the volume comes from the same object, apply the offset in world system
+                double offset = wxGetApp().plater()->canvas3D()->get_size_proportional_to_max_bed_size(0.05);
+                dst_volume->translate(dst_matrix.inverse() * Vec3d(offset, offset, 0.0));
+            }
+            else
+            {
+                // if the volume comes from another object, apply the offset as done when adding modifiers
+                // see ObjectList::load_generic_subobject()
+                BoundingBoxf3 mesh_bb = dst_volume->mesh.bounding_box();
+                dst_volume->set_transformation(Geometry::Transformation::volume_to_bed_transformation(dst_instance->get_transformation(), mesh_bb));
+                dst_volume->set_offset(dst_matrix.inverse() * (Vec3d(dst_instance_bb.max(0), dst_instance_bb.min(1), dst_instance_bb.min(2)) + 0.5 * mesh_bb.size() - dst_instance->get_transformation().get_offset()));
+            }
+#else
             double offset = wxGetApp().plater()->canvas3D()->get_size_proportional_to_max_bed_size(0.05);
             dst_volume->translate(offset, offset, 0.0);
+#endif // ENABLE_FIX_GITHUB_2428
             volumes.push_back(dst_volume);
         }
-        wxGetApp().obj_list()->paste_volumes_into_list(obj_idx, volumes);
+        wxGetApp().obj_list()->paste_volumes_into_list(dst_obj_idx, volumes);
     }
 }
 

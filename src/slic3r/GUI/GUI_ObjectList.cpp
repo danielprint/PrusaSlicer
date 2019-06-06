@@ -1480,6 +1480,7 @@ void ObjectList::load_part( ModelObject* model_object,
 
 }
 
+#if !ENABLE_FIX_GITHUB_2428
 // Find volume transformation, so that the chained (instance_trafo * volume_trafo) will be as close to identity
 // as possible in least squares norm in regard to the 8 corners of bbox.
 // Bounding box is expected to be centered around zero in all axes.
@@ -1539,6 +1540,7 @@ Geometry::Transformation volume_to_bed_transformation(const Geometry::Transforma
 
     return out;
 }
+#endif // !ENABLE_FIX_GITHUB_2428
 
 void ObjectList::load_generic_subobject(const std::string& type_name, const ModelVolumeType type)
 {
@@ -1593,7 +1595,11 @@ void ObjectList::load_generic_subobject(const std::string& type_name, const Mode
         const GLVolume* v = selection.get_volume(*selection.get_volume_idxs().begin());
         // Transform the new modifier to be aligned with the print bed.
 		const BoundingBoxf3 mesh_bb = new_volume->mesh.bounding_box();
-		new_volume->set_transformation(volume_to_bed_transformation(v->get_instance_transformation(), mesh_bb));
+#if ENABLE_FIX_GITHUB_2428
+        new_volume->set_transformation(Geometry::Transformation::volume_to_bed_transformation(v->get_instance_transformation(), mesh_bb));
+#else
+        new_volume->set_transformation(volume_to_bed_transformation(v->get_instance_transformation(), mesh_bb));
+#endif // ENABLE_FIX_GITHUB_2428
         // Set the modifier position.
         auto offset = (type_name == "Slab") ?
             // Slab: Lift to print bed
