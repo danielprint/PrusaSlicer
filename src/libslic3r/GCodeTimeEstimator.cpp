@@ -125,8 +125,13 @@ namespace Slic3r {
         trapezoid.distance = distance;
         trapezoid.feedrate = feedrate;
 
+#if ENABLE_FIX_GITHUB_2433
+        float accelerate_distance = std::max(0.0f, estimate_acceleration_distance(feedrate.entry, feedrate.cruise, acceleration));
+        float decelerate_distance = std::max(0.0f, estimate_acceleration_distance(feedrate.cruise, feedrate.exit, -acceleration));
+#else
         float accelerate_distance = estimate_acceleration_distance(feedrate.entry, feedrate.cruise, acceleration);
         float decelerate_distance = estimate_acceleration_distance(feedrate.cruise, feedrate.exit, -acceleration);
+#endif // ENABLE_FIX_GITHUB_2433
         float cruise_distance = distance - accelerate_distance - decelerate_distance;
 
         // Not enough space to reach the nominal feedrate.
