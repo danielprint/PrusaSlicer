@@ -1579,7 +1579,16 @@ void GLCanvas3D::update_volumes_colors_by_extruder()
 
 void GLCanvas3D::render()
 {
+#if ENABLE_FIX_GITHUB_2482
+    if (m_in_render)
+    {
+        // if called recursively, return
+        m_dirty = true;
+        return;
+    }
+#else
     wxCHECK_RET(!m_in_render, "GLCanvas3D::render() called recursively");
+#endif // ENABLE_FIX_GITHUB_2482
     m_in_render = true;
     Slic3r::ScopeGuard in_render_guard([this]() { m_in_render = false; });
     (void)in_render_guard;
