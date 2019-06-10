@@ -1910,7 +1910,7 @@ void Selection::paste_volumes_from_clipboard()
         BoundingBoxf3 dst_instance_bb = dst_object->instance_bounding_box(dst_inst_idx);
         Transform3d src_matrix = src_object->instances[0]->get_transformation().get_matrix(true);
         Transform3d dst_matrix = dst_instance->get_transformation().get_matrix(true);
-        bool from_same_object = src_matrix.isApprox(dst_matrix);
+        bool from_same_object = (src_object->input_file == dst_object->input_file) && src_matrix.isApprox(dst_matrix);
 #else
         ModelObject* dst_object = m_model->objects[dst_obj_idx];
 #endif // ENABLE_FIX_GITHUB_2428
