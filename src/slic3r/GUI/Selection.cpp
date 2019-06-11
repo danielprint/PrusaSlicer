@@ -296,6 +296,11 @@ void Selection::clear()
     if (!m_valid)
         return;
 
+#if ENABLE_FIX_GITHUB_2490
+    if (m_list.empty())
+        return;
+#endif // ENABLE_FIX_GITHUB_2490
+
     for (unsigned int i : m_list)
     {
         (*m_volumes)[i]->selected = false;
