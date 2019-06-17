@@ -1926,9 +1926,9 @@ void Selection::paste_volumes_from_clipboard()
 #if ENABLE_FIX_GITHUB_2428
             if (from_same_object)
             {
-                // if the volume comes from the same object, apply the offset in world system
-                double offset = wxGetApp().plater()->canvas3D()->get_size_proportional_to_max_bed_size(0.05);
-                dst_volume->translate(dst_matrix.inverse() * Vec3d(offset, offset, 0.0));
+//                // if the volume comes from the same object, apply the offset in world system
+//                double offset = wxGetApp().plater()->canvas3D()->get_size_proportional_to_max_bed_size(0.05);
+//                dst_volume->translate(dst_matrix.inverse() * Vec3d(offset, offset, 0.0));
             }
             else
             {
