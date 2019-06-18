@@ -1918,6 +1918,11 @@ void Selection::paste_volumes_from_clipboard()
         ModelObject* dst_object = m_model->objects[dst_obj_idx];
 #endif // ENABLE_FIX_GITHUB_2428
 
+#if ENABLE_FIX_GITHUB_2428
+        // used to keep relative position of multivolume selections when pasting from another object
+        BoundingBoxf3 total_bb;
+#endif // ENABLE_FIX_GITHUB_2428
+
         ModelVolumePtrs volumes;
         for (ModelVolume* src_volume : src_object->volumes)
         {
@@ -1934,9 +1939,7 @@ void Selection::paste_volumes_from_clipboard()
             {
                 // if the volume comes from another object, apply the offset as done when adding modifiers
                 // see ObjectList::load_generic_subobject()
-                BoundingBoxf3 mesh_bb = dst_volume->mesh().bounding_box();
-                dst_volume->set_transformation(Geometry::Transformation::volume_to_bed_transformation(dst_instance->get_transformation(), mesh_bb));
-                dst_volume->set_offset(dst_matrix.inverse() * (Vec3d(dst_instance_bb.max(0), dst_instance_bb.min(1), dst_instance_bb.min(2)) + 0.5 * mesh_bb.size() - dst_instance->get_transformation().get_offset()));
+                total_bb.merge(dst_volume->mesh().bounding_box().transformed(src_volume->get_matrix()));
             }
 #else
             double offset = wxGetApp().plater()->canvas3D()->get_size_proportional_to_max_bed_size(0.05);
@@ -1944,6 +1947,18 @@ void Selection::paste_volumes_from_clipboard()
 #endif // ENABLE_FIX_GITHUB_2428
             volumes.push_back(dst_volume);
         }
+
+#if ENABLE_FIX_GITHUB_2428
+        // keeps relative position of multivolume selections
+        if (!from_same_object)
+        {
+            for (ModelVolume* v : volumes)
+            {
+                v->set_offset((v->get_offset()- total_bb.center()) + dst_matrix.inverse() * (Vec3d(dst_instance_bb.max(0), dst_instance_bb.min(1), dst_instance_bb.min(2)) + 0.5 * total_bb.size() - dst_instance->get_transformation().get_offset()));
+            }
+        }
+#endif // ENABLE_FIX_GITHUB_2428
+
         wxGetApp().obj_list()->paste_volumes_into_list(dst_obj_idx, volumes);
     }
 }
