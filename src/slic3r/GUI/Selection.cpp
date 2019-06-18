@@ -1934,7 +1934,7 @@ void Selection::paste_volumes_from_clipboard()
             {
                 // if the volume comes from another object, apply the offset as done when adding modifiers
                 // see ObjectList::load_generic_subobject()
-                BoundingBoxf3 mesh_bb = dst_volume->mesh.bounding_box();
+                BoundingBoxf3 mesh_bb = dst_volume->mesh().bounding_box();
                 dst_volume->set_transformation(Geometry::Transformation::volume_to_bed_transformation(dst_instance->get_transformation(), mesh_bb));
                 dst_volume->set_offset(dst_matrix.inverse() * (Vec3d(dst_instance_bb.max(0), dst_instance_bb.min(1), dst_instance_bb.min(2)) + 0.5 * mesh_bb.size() - dst_instance->get_transformation().get_offset()));
             }
