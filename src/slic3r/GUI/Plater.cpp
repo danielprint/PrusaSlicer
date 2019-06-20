@@ -39,7 +39,12 @@
 #include "libslic3r/SLA/SLARotfinder.hpp"
 #include "libslic3r/Utils.hpp"
 
-#include "libnest2d/optimizers/nlopt/genetic.hpp"
+//#include "libslic3r/ClipperUtils.hpp"
+
+// #include "libnest2d/optimizers/nlopt/genetic.hpp"
+// #include "libnest2d/backends/clipper/geometries.hpp"
+// #include "libnest2d/utils/rotcalipers.hpp"
+#include "libslic3r/MinAreaBoundingBox.hpp"
 
 #include "GUI.hpp"
 #include "GUI_App.hpp"
@@ -1332,10 +1337,22 @@ struct Plater::priv
             });
         }
         
+        // TODO: use this when we all migrated to VS2019
+        // Job(const Job&) = delete;
+        // Job(Job&&) = default;
+        // Job& operator=(const Job&) = delete;
+        // Job& operator=(Job&&) = default;
         Job(const Job&) = delete;
-        Job(Job&&) = default;
         Job& operator=(const Job&) = delete;
-        Job& operator=(Job&&) = default;
+        Job(Job &&o) :
+            m_range(o.m_range),
+            m_ftr(std::move(o.m_ftr)),
+            m_plater(o.m_plater),
+            m_finalized(o.m_finalized)
+        {
+            m_running.store(o.m_running.load());
+            m_canceled.store(o.m_canceled.load());
+        }
         
         virtual void process() = 0;
         
@@ -1417,26 +1434,37 @@ struct Plater::priv
             }
 
         public:
-            using Job::Job;
+            //using Job::Job;
+            ArrangeJob(priv * pltr): Job(pltr) {}
             int  status_range() const override { return count; }
             void set_count(int c) { count = c; }
             void process() override;
-        } arrange_job{m_plater};
+        } arrange_job/*{m_plater}*/;
 
         class RotoptimizeJob : public Job
         {
         public:
-            using Job::Job;
+            //using Job::Job;
+            RotoptimizeJob(priv * pltr): Job(pltr) {}
             void process() override;
-        } rotoptimize_job{m_plater};
+        } rotoptimize_job/*{m_plater}*/;
 
-        std::vector<std::reference_wrapper<Job>> m_jobs{arrange_job,
-                                                        rotoptimize_job};
+        // To create a new job, just define a new subclass of Job, implement
+        // the process and the optional prepare() and finalize() methods
+        // Register the instance of the class in the m_jobs container
+        // if it cannot run concurrently with other jobs in this group 
+
+        std::vector<std::reference_wrapper<Job>> m_jobs/*{arrange_job,
+                                                        rotoptimize_job}*/;
 
     public:
-        
-        ExclusiveJobGroup(priv *_plater): m_plater(_plater) {}
-        
+        ExclusiveJobGroup(priv *_plater)
+            : m_plater(_plater)
+            , arrange_job(m_plater)
+            , rotoptimize_job(m_plater)
+            , m_jobs({arrange_job, rotoptimize_job})
+        {}
+
         void start(Jobs jid) {
             m_plater->background_process.stop();
             stop_all();
@@ -1730,6 +1758,7 @@ Plater::priv::priv(Plater *q, MainFrame *main_frame)
     preview->get_wxglcanvas()->Bind(EVT_GLCANVAS_UPDATE_BED_SHAPE, [this](SimpleEvent&) { set_bed_shape(config->option<ConfigOptionPoints>("bed_shape")->values); });
     preview->get_wxglcanvas()->Bind(EVT_GLCANVAS_TAB, [this](SimpleEvent&) { select_next_view_3D(); });
     preview->get_wxglcanvas()->Bind(EVT_GLCANVAS_MOVE_DOUBLE_SLIDER, [this](wxKeyEvent& evt) { preview->move_double_slider(evt); });
+    preview->get_wxglcanvas()->Bind(EVT_GLCANVAS_EDIT_COLOR_CHANGE, [this](wxKeyEvent& evt) { preview->edit_double_slider(evt); });
 
     q->Bind(EVT_SLICING_COMPLETED, &priv::on_slicing_completed, this);
     q->Bind(EVT_PROCESS_COMPLETED, &priv::on_process_completed, this);
@@ -1747,7 +1776,8 @@ Plater::priv::priv(Plater *q, MainFrame *main_frame)
 
 void Plater::priv::update(bool force_full_scene_refresh)
 {
-    wxWindowUpdateLocker freeze_guard(q);
+    // the following line, when enabled, causes flickering on NVIDIA graphics cards
+//    wxWindowUpdateLocker freeze_guard(q);
     if (get_config("autocenter") == "1") {
         // auto *bed_shape_opt = config->opt<ConfigOptionPoints>("bed_shape");
         // const auto bed_shape = Slic3r::Polygon::new_scale(bed_shape_opt->values);
@@ -2444,8 +2474,9 @@ void Plater::priv::ExclusiveJobGroup::RotoptimizeJob::process()
         },
         [this]() { return was_canceled(); });
 
-    const auto *bed_shape_opt = plater().config->opt<ConfigOptionPoints>(
-        "bed_shape");
+    const auto *bed_shape_opt =
+        plater().config->opt<ConfigOptionPoints>("bed_shape");
+    
     assert(bed_shape_opt);
 
     auto &   bedpoints = bed_shape_opt->values;
@@ -2454,70 +2485,40 @@ void Plater::priv::ExclusiveJobGroup::RotoptimizeJob::process()
     for (auto &v : bedpoints) bed.append(Point::new_scale(v(0), v(1)));
 
     double mindist = 6.0; // FIXME
-    double offs    = mindist / 2.0 - EPSILON;
-
-    if (!was_canceled()) // wasn't canceled
-        for (ModelInstance *oi : o->instances) {
+    
+    if (!was_canceled()) {
+        for(ModelInstance * oi : o->instances) {
             oi->set_rotation({r[X], r[Y], r[Z]});
-
-            auto trchull = o->convex_hull_2d(
-                oi->get_transformation().get_matrix());
-
-            namespace opt = libnest2d::opt;
-            opt::StopCriteria stopcr;
-            stopcr.relative_score_difference = 0.01;
-            stopcr.max_iterations            = 10000;
-            stopcr.stop_score                = 0.0;
-            opt::GeneticOptimizer solver(stopcr);
-            Polygon               pbed(bed);
-
-            auto   bin  = pbed.bounding_box();
-            double binw = bin.size()(X) * SCALING_FACTOR - offs;
-            double binh = bin.size()(Y) * SCALING_FACTOR - offs;
-
-            auto result = solver.optimize_min(
-                [&trchull, binw, binh](double rot) {
-                    auto chull = trchull;
-                    chull.rotate(rot);
-
-                    auto   bb  = chull.bounding_box();
-                    double bbw = bb.size()(X) * SCALING_FACTOR;
-                    double bbh = bb.size()(Y) * SCALING_FACTOR;
-
-                    auto   wdiff = bbw - binw;
-                    auto   hdiff = bbh - binh;
-                    double diff  = 0;
-                    if (wdiff < 0 && hdiff < 0) diff = wdiff + hdiff;
-                    if (wdiff > 0) diff += wdiff;
-                    if (hdiff > 0) diff += hdiff;
-
-                    return diff;
-                },
-                opt::initvals(0.0),
-                opt::bound(-PI / 2, PI / 2));
-
-            double r = std::get<0>(result.optimum);
-
-            Vec3d rt = oi->get_rotation();
-            rt(Z) += r;
-            oi->set_rotation(rt);
-
-            arr::WipeTowerInfo wti; // useless in SLA context
-            arr::find_new_position(plater().model,
-                                   o->instances,
-                                   coord_t(mindist / SCALING_FACTOR),
-                                   bed,
-                                   wti);
-
-            // Correct the z offset of the object which was corrupted be
-            // the rotation
-            o->ensure_on_bed();
+    
+            auto    trmatrix = oi->get_transformation().get_matrix();
+            Polygon trchull  = o->convex_hull_2d(trmatrix);
             
-            update_status(100, _(L("Orientation found.")));
+            MinAreaBoundigBox rotbb(trchull, MinAreaBoundigBox::pcConvex);
+            double            r = rotbb.angle_to_X();
+    
+            // The box should be landscape
+            if(rotbb.width() < rotbb.height()) r += PI / 2;
+            
+            Vec3d rt = oi->get_rotation(); rt(Z) += r;
+            
+            oi->set_rotation(rt);
         }
-    else {
-        update_status(100, _(L("Orientation search canceled.")));
+    
+        arr::WipeTowerInfo wti; // useless in SLA context
+        arr::find_new_position(plater().model,
+                               o->instances,
+                               coord_t(mindist / SCALING_FACTOR),
+                               bed,
+                               wti);
+    
+        // Correct the z offset of the object which was corrupted be
+        // the rotation
+        o->ensure_on_bed();
     }
+
+    update_status(100,
+                  was_canceled() ? _(L("Orientation search canceled."))
+                                 : _(L("Orientation found.")));
 }
 
 void Plater::priv::split_object()
