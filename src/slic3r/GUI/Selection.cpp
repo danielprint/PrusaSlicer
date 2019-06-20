@@ -47,6 +47,28 @@ Selection::VolumeCache::VolumeCache(const Geometry::Transformation& volume_trans
 {
 }
 
+#if ENABLE_FIX_SPE_970
+bool Selection::Clipboard::is_sla_compliant() const
+{
+    if (m_mode == Selection::Volume)
+        return false;
+
+    for (const ModelObject* o : m_model.objects)
+    {
+        if (o->is_multiparts())
+            return false;
+
+        for (const ModelVolume* v : o->volumes)
+        {
+            if (v->is_modifier())
+                return false;
+        }
+    }
+
+    return true;
+}
+#endif // ENABLE_FIX_SPE_970
+
 Selection::Selection()
     : m_volumes(nullptr)
     , m_model(nullptr)
@@ -384,6 +406,22 @@ bool Selection::is_from_single_object() const
     int idx = get_object_idx();
     return (0 <= idx) && (idx < 1000);
 }
+
+#if ENABLE_FIX_SPE_970
+bool Selection::is_sla_compliant() const
+{
+    if (m_mode == Volume)
+        return false;
+
+    for (unsigned int i : m_list)
+    {
+        if ((*m_volumes)[i]->is_modifier)
+            return false;
+    }
+
+    return true;
+}
+#endif // ENABLE_FIX_SPE_970
 
 bool Selection::requires_uniform_scale() const
 {

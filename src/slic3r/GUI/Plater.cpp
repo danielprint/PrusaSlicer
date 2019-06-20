@@ -4184,30 +4184,18 @@ void Plater::update_object_menu() { p->update_object_menu(); }
 
 void Plater::copy_selection_to_clipboard()
 {
-    p->view3D->get_canvas3d()->get_selection().copy_to_clipboard();
+#if ENABLE_FIX_SPE_970
+    if (can_copy_to_clipboard())
+#endif // ENABLE_FIX_SPE_970
+        p->view3D->get_canvas3d()->get_selection().copy_to_clipboard();
 }
 
 void Plater::paste_from_clipboard()
 {
-    p->view3D->get_canvas3d()->get_selection().paste_from_clipboard();
-}
-
-bool Plater::can_paste_from_clipboard() const
-{
-    const Selection& selection = p->view3D->get_canvas3d()->get_selection();
-    const Selection::Clipboard& clipboard = selection.get_clipboard();
-    Selection::EMode mode = clipboard.get_mode();
-
-    if (clipboard.is_empty())
-        return false;
-
-    if ((mode == Selection::Volume) && !selection.is_from_single_instance())
-        return false;
-
-    if ((mode == Selection::Instance) && (selection.get_mode() != Selection::Instance))
-        return false;
-
-    return true;
+#if ENABLE_FIX_SPE_970
+    if (can_paste_from_clipboard())
+#endif // ENABLE_FIX_SPE_970
+        p->view3D->get_canvas3d()->get_selection().paste_from_clipboard();
 }
 
 void Plater::msw_rescale()
@@ -4234,7 +4222,44 @@ bool Plater::can_split_to_objects() const { return p->can_split_to_objects(); }
 bool Plater::can_split_to_volumes() const { return p->can_split_to_volumes(); }
 bool Plater::can_arrange() const { return p->can_arrange(); }
 bool Plater::can_layers_editing() const { return p->can_layers_editing(); }
-bool Plater::can_copy() const { return !is_selection_empty(); }
+bool Plater::can_paste_from_clipboard() const
+{
+    const Selection& selection = p->view3D->get_canvas3d()->get_selection();
+    const Selection::Clipboard& clipboard = selection.get_clipboard();
+
+    if (clipboard.is_empty())
+        return false;
+
+#if ENABLE_FIX_SPE_970
+    if ((wxGetApp().preset_bundle->printers.get_edited_preset().printer_technology() == ptSLA) && !clipboard.is_sla_compliant())
+        return false;
+#endif // ENABLE_FIX_SPE_970
+
+    Selection::EMode mode = clipboard.get_mode();
+    if ((mode == Selection::Volume) && !selection.is_from_single_instance())
+        return false;
+
+    if ((mode == Selection::Instance) && (selection.get_mode() != Selection::Instance))
+        return false;
+
+    return true;
+}
+
+#if ENABLE_FIX_SPE_970
+bool Plater::can_copy_to_clipboard() const
+{
+    if (is_selection_empty())
+        return false;
+
+    const Selection& selection = p->view3D->get_canvas3d()->get_selection();
+    if ((wxGetApp().preset_bundle->printers.get_edited_preset().printer_technology() == ptSLA) && !selection.is_sla_compliant())
+        return false;
+
+    return true;
+}
+#else
+bool Plater::can_copy_to_clipboard() const { return !is_selection_empty(); }
 bool Plater::can_paste() const { return can_paste_from_clipboard(); }
+#endif // ENABLE_FIX_SPE_970
 
 }}    // namespace Slic3r::GUI

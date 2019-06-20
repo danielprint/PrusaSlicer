@@ -3508,7 +3508,7 @@ bool GLCanvas3D::_init_toolbar()
     item.tooltip = _utf8(L("Copy")) + " [" + GUI::shortkey_ctrl_prefix() + "C]";
     item.sprite_id = 4;
     item.action_callback = [this]() { if (m_canvas != nullptr) wxPostEvent(m_canvas, SimpleEvent(EVT_GLTOOLBAR_COPY)); };
-    item.enabled_state_callback = []()->bool { return wxGetApp().plater()->can_copy(); };
+    item.enabled_state_callback = []()->bool { return wxGetApp().plater()->can_copy_to_clipboard(); };
     if (!m_toolbar.add_item(item))
         return false;
 
@@ -3519,7 +3519,11 @@ bool GLCanvas3D::_init_toolbar()
     item.tooltip = _utf8(L("Paste")) + " [" + GUI::shortkey_ctrl_prefix() + "V]";
     item.sprite_id = 5;
     item.action_callback = [this]() { if (m_canvas != nullptr) wxPostEvent(m_canvas, SimpleEvent(EVT_GLTOOLBAR_PASTE)); };
+#if ENABLE_FIX_SPE_970
+    item.enabled_state_callback = []()->bool { return wxGetApp().plater()->can_paste_from_clipboard(); };
+#else
     item.enabled_state_callback = []()->bool { return wxGetApp().plater()->can_paste(); };
+#endif // ENABLE_FIX_SPE_970
     if (!m_toolbar.add_item(item))
         return false;
 
