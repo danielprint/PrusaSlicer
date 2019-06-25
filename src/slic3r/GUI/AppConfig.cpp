@@ -73,6 +73,9 @@ void AppConfig::set_defaults()
     if (get("custom_toolbar_size").empty())
         set("custom_toolbar_size", "100");
 
+    if (get("use_perspective_camera").empty())
+        set("use_perspective_camera", "1");
+
     // Remove legacy window positions/sizes
     erase("", "main_frame_maximized");
     erase("", "main_frame_pos");
