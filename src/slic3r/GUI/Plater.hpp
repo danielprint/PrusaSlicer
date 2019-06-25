@@ -213,9 +213,6 @@ public:
     bool can_layers_editing() const;
     bool can_paste_from_clipboard() const;
     bool can_copy_to_clipboard() const;
-#if !ENABLE_FIX_SPE_970
-    bool can_paste() const;
-#endif // !ENABLE_FIX_SPE_970
 
     void msw_rescale();
 

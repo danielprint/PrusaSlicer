@@ -47,6 +47,5 @@
 // Toolbars and Gizmos use icons imported from svg files
 #define ENABLE_SVG_ICONS (1 && ENABLE_1_42_0_ALPHA8 && ENABLE_TEXTURES_FROM_SVG)
 
-#define ENABLE_FIX_SPE_970 1
 
 #endif // _technologies_h_

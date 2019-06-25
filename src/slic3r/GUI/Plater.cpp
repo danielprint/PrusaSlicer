@@ -4187,17 +4187,13 @@ void Plater::update_object_menu() { p->update_object_menu(); }
 
 void Plater::copy_selection_to_clipboard()
 {
-#if ENABLE_FIX_SPE_970
     if (can_copy_to_clipboard())
-#endif // ENABLE_FIX_SPE_970
         p->view3D->get_canvas3d()->get_selection().copy_to_clipboard();
 }
 
 void Plater::paste_from_clipboard()
 {
-#if ENABLE_FIX_SPE_970
     if (can_paste_from_clipboard())
-#endif // ENABLE_FIX_SPE_970
         p->view3D->get_canvas3d()->get_selection().paste_from_clipboard();
 }
 
@@ -4233,10 +4229,8 @@ bool Plater::can_paste_from_clipboard() const
     if (clipboard.is_empty())
         return false;
 
-#if ENABLE_FIX_SPE_970
     if ((wxGetApp().preset_bundle->printers.get_edited_preset().printer_technology() == ptSLA) && !clipboard.is_sla_compliant())
         return false;
-#endif // ENABLE_FIX_SPE_970
 
     Selection::EMode mode = clipboard.get_mode();
     if ((mode == Selection::Volume) && !selection.is_from_single_instance())
@@ -4248,7 +4242,6 @@ bool Plater::can_paste_from_clipboard() const
     return true;
 }
 
-#if ENABLE_FIX_SPE_970
 bool Plater::can_copy_to_clipboard() const
 {
     if (is_selection_empty())
@@ -4260,9 +4253,5 @@ bool Plater::can_copy_to_clipboard() const
 
     return true;
 }
-#else
-bool Plater::can_copy_to_clipboard() const { return !is_selection_empty(); }
-bool Plater::can_paste() const { return can_paste_from_clipboard(); }
-#endif // ENABLE_FIX_SPE_970
 
 }}    // namespace Slic3r::GUI

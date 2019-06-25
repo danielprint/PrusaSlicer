@@ -47,7 +47,6 @@ Selection::VolumeCache::VolumeCache(const Geometry::Transformation& volume_trans
 {
 }
 
-#if ENABLE_FIX_SPE_970
 bool Selection::Clipboard::is_sla_compliant() const
 {
     if (m_mode == Selection::Volume)
@@ -67,7 +66,6 @@ bool Selection::Clipboard::is_sla_compliant() const
 
     return true;
 }
-#endif // ENABLE_FIX_SPE_970
 
 Selection::Selection()
     : m_volumes(nullptr)
@@ -407,7 +405,6 @@ bool Selection::is_from_single_object() const
     return (0 <= idx) && (idx < 1000);
 }
 
-#if ENABLE_FIX_SPE_970
 bool Selection::is_sla_compliant() const
 {
     if (m_mode == Volume)
@@ -421,7 +418,6 @@ bool Selection::is_sla_compliant() const
 
     return true;
 }
-#endif // ENABLE_FIX_SPE_970
 
 bool Selection::requires_uniform_scale() const
 {
