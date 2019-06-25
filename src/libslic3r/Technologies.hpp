@@ -46,8 +46,4 @@
 #define ENABLE_SVG_ICONS (1 && ENABLE_1_42_0_ALPHA8 && ENABLE_TEXTURES_FROM_SVG)
 
 
-#define ENABLE_FIX_GITHUB_2395 1
-#define ENABLE_FIX_GITHUB_2433 1
-#define ENABLE_FIX_GITHUB_2428 1
-
 #endif // _technologies_h_

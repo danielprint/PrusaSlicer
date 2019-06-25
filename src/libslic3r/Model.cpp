@@ -461,7 +461,6 @@ bool Model::looks_like_multipart_object() const
 {
     if (this->objects.size() <= 1)
         return false;
-
     double zmin = std::numeric_limits<double>::max();
     for (const ModelObject *obj : this->objects) {
         if (obj->volumes.size() > 1 || obj->config.keys().size() > 1)
@@ -490,7 +489,6 @@ void Model::convert_multipart_object(unsigned int max_extruders)
 
     reset_auto_extruder_id();
 
-#if ENABLE_FIX_GITHUB_2395
     bool is_single_object = (this->objects.size() == 1);
 
     for (const ModelObject* o : this->objects)
@@ -541,22 +539,6 @@ void Model::convert_multipart_object(unsigned int max_extruders)
     else
         // If there are more than one object, create a single instance
         object->add_instance();
-#else
-    for (const ModelObject* o : this->objects)
-        for (const ModelVolume* v : o->volumes)
-        {
-            ModelVolume* new_v = object->add_volume(*v);
-            if (new_v != nullptr)
-            {
-                new_v->name = o->name;
-                new_v->config.set_deserialize("extruder", get_auto_extruder_id_as_string(max_extruders));
-                new_v->translate(-o->origin_translation);
-            }
-        }
-
-    for (const ModelInstance* i : this->objects.front()->instances)
-        object->add_instance(*i);
-#endif // ENABLE_FIX_GITHUB_2395
 
     this->clear_objects();
     this->objects.push_back(object);

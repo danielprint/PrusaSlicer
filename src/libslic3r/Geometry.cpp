@@ -1409,7 +1409,6 @@ Transformation Transformation::operator * (const Transformation& other) const
     return Transformation(get_matrix() * other.get_matrix());
 }
 
-#if ENABLE_FIX_GITHUB_2428
 Transformation Transformation::volume_to_bed_transformation(const Transformation& instance_transformation, const BoundingBoxf3& bbox)
 {
     Transformation out;
@@ -1466,7 +1465,6 @@ Transformation Transformation::volume_to_bed_transformation(const Transformation
 
     return out;
 }
-#endif // ENABLE_FIX_GITHUB_2428
 
 Eigen::Quaterniond rotation_xyz_diff(const Vec3d &rot_xyz_from, const Vec3d &rot_xyz_to)
 {
