@@ -173,7 +173,7 @@ void print_help(bool include_print_options/* = false*/, PrinterTechnology printe
     else {
         boost::nowide::cout
             << std::endl
-            << "Run --help-fff / --help-sla to see the full listing of print options." << std::endl;
+            << "Run --help-sla to see the full listing of print options." << std::endl;
     }
 }
 

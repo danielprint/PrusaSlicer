@@ -70,7 +70,6 @@ static const t_config_enum_values s_keys_map_ArcFittingType {
 CONFIG_OPTION_ENUM_DEFINE_STATIC_MAPS(ArcFittingType)
 
 static t_config_enum_values s_keys_map_PrinterTechnology {
-    { "FFF",            ptFFF },
     { "SLA",            ptSLA }
 };
 CONFIG_OPTION_ENUM_DEFINE_STATIC_MAPS(PrinterTechnology)
@@ -360,8 +359,8 @@ void PrintConfigDef::init_common_params()
     def = this->add("printer_technology", coEnum);
     def->label = L("Printer technology");
     def->tooltip = L("Printer technology");
-    def->set_enum<PrinterTechnology>({ "FFF", "SLA" });
-    def->set_default_value(new ConfigOptionEnum<PrinterTechnology>(ptFFF));
+    def->set_enum<PrinterTechnology>({ "SLA" });
+    def->set_default_value(new ConfigOptionEnum<PrinterTechnology>(ptSLA));
 
     def = this->add("bed_shape", coPoints);
     def->label = L("Bed shape");
@@ -5779,11 +5778,6 @@ CLIActionsConfigDef::CLIActionsConfigDef()
     def->cli = "help|h";
     def->set_default_value(new ConfigOptionBool(false));
 
-    def = this->add("help_fff", coBool);
-    def->label = L("Help (FFF options)");
-    def->tooltip = L("Show the full list of print/G-code configuration options.");
-    def->set_default_value(new ConfigOptionBool(false));
-
     def = this->add("help_sla", coBool);
     def->label = L("Help (SLA options)");
     def->tooltip = L("Show the full list of SLA print configuration options.");
@@ -5793,7 +5787,7 @@ CLIActionsConfigDef::CLIActionsConfigDef()
     def->label = ("Get list of printer models");
     def->tooltip = ("Get list of installed printer models into JSON.\n"
         "Note:\n"
-        "To print printer models for required technology use 'printer-technology' option with value FFF or SLA. By default printer_technology is FFF.\n"
+        "This build only supports SLA printer technology.\n"
         "To print out JSON into file use 'output' option.\n"
         "To specify configuration folder use 'datadir' option.");
 
@@ -5845,14 +5839,12 @@ CLIActionsConfigDef::CLIActionsConfigDef()
     def->tooltip = L("Export the model(s) as 3MF.");
     def->set_default_value(new ConfigOptionBool(false));
 
-    //! slice/export_sla/export_gcode is the same action
+    //! slice/export_sla is the same action
     //! May be merged into one action "slice_and_export"
 
     def = this->add("slice", coBool);
     def->label = L("Slice");
-//    def->tooltip = L("Slice the model as FFF or SLA based on the printer_technology configuration value.");
-    def->tooltip = L("Slice the model as FFF or SLA based on the printer_technology configuration value "
-                     "and export the result.");
+    def->tooltip = L("Slice the model using the SLA printer technology and export the result.");
     def->cli = "slice|s";
     def->set_default_value(new ConfigOptionBool(false));
 
@@ -5860,12 +5852,6 @@ CLIActionsConfigDef::CLIActionsConfigDef()
     def->label = L("Export SLA");
     def->tooltip = L("Slice the model and export SLA printing layers as PNG.");
     def->cli = "export-sla|sla";
-    def->set_default_value(new ConfigOptionBool(false));
-
-    def = this->add("export_gcode", coBool);
-    def->label = L("Export G-code");
-    def->tooltip = L("Slice the model and export toolpaths as G-code.");
-    def->cli = "export-gcode|gcode|g";
     def->set_default_value(new ConfigOptionBool(false));
 }
 
