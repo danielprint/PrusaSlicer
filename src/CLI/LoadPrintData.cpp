@@ -9,7 +9,6 @@
 
 #include "libslic3r/libslic3r.h"
 #include "libslic3r/Config.hpp"
-#include "libslic3r/GCode/PostProcessor.hpp"
 #include "libslic3r/Model.hpp"
 #include "libslic3r/FileReader.hpp"
 
@@ -27,17 +26,25 @@ PrinterTechnology get_printer_technology(const DynamicConfig &config)
 // may be "validate_and_apply_printer_technology" will be better? 
 static bool can_apply_printer_technology(PrinterTechnology& printer_technology, const PrinterTechnology& other_printer_technology)
 {
+    if (other_printer_technology == ptFFF) {
+        boost::nowide::cerr << "FFF printer technology is not supported in this SLA-only build." << std::endl;
+        return false;
+    }
+
     if (printer_technology == ptUnknown) {
         printer_technology = other_printer_technology;
         return true;
     }
 
-    bool invalid_other_pt = printer_technology != other_printer_technology && other_printer_technology != ptUnknown;
+    if (other_printer_technology == ptUnknown)
+        return true;
 
-    if (invalid_other_pt)
-        boost::nowide::cerr << "Mixing configurations for FFF and SLA technologies" << std::endl;
+    if (printer_technology != other_printer_technology) {
+        boost::nowide::cerr << "Conflicting printer technologies detected in the provided configuration." << std::endl;
+        return false;
+    }
 
-    return !invalid_other_pt;
+    return true;
 }
 
 static void print_config_substitutions(const ConfigSubstitutions& config_substitutions, const std::string& file)
@@ -183,31 +190,26 @@ static bool finalize_print_config(DynamicPrintConfig& print_config, PrinterTechn
     print_config.normalize_fdm();
 
     if (printer_technology == ptUnknown)
-        printer_technology = cli.actions_config.has("export_sla") ? ptSLA : ptFFF;
+        printer_technology = ptSLA;
+
+    if (printer_technology != ptSLA) {
+        boost::nowide::cerr << "Only SLA printer technology is supported in this build." << std::endl;
+        return false;
+    }
+
     print_config.option<ConfigOptionEnum<PrinterTechnology>>("printer_technology", true)->value = printer_technology;
 
-    // Initialize full print configs for both the FFF and SLA technologies.
-    FullPrintConfig    fff_print_config;
     SLAFullPrintConfig sla_print_config;
+    sla_print_config.output_filename_format.value = "[input_filename_base].sl1";
 
-    // Synchronize the default parameters and the ones received on the command line.
-    if (printer_technology == ptFFF) {
-        fff_print_config.apply(print_config, true);
-        print_config.apply(fff_print_config, true);
-    }
-    else {
-        assert(printer_technology == ptSLA);
-        sla_print_config.output_filename_format.value = "[input_filename_base].sl1";
+    // The default bed shape should reflect the default display parameters
+    // and not the fff defaults.
+    double w = sla_print_config.display_width.getFloat();
+    double h = sla_print_config.display_height.getFloat();
+    sla_print_config.bed_shape.values = { Vec2d(0, 0), Vec2d(w, 0), Vec2d(w, h), Vec2d(0, h) };
 
-        // The default bed shape should reflect the default display parameters
-        // and not the fff defaults.
-        double w = sla_print_config.display_width.getFloat();
-        double h = sla_print_config.display_height.getFloat();
-        sla_print_config.bed_shape.values = { Vec2d(0, 0), Vec2d(w, 0), Vec2d(w, h), Vec2d(0, h) };
-
-        sla_print_config.apply(print_config, true);
-        print_config.apply(sla_print_config, true);
-    }
+    sla_print_config.apply(print_config, true);
+    print_config.apply(sla_print_config, true);
 
     // validate print configuration
     std::string validity = print_config.validate();
@@ -241,15 +243,7 @@ bool is_needed_post_processing(const DynamicPrintConfig& print_config)
     if (print_config.has("post_process")) {
         const std::vector<std::string>& post_process = print_config.opt<ConfigOptionStrings>("post_process")->values;
         if (!post_process.empty()) {
-            boost::nowide::cout << "\nA post-processing script has been detected in the config data:\n\n";
-            for (const std::string& s : post_process) {
-                boost::nowide::cout << "> " << s << "\n";
-            }
-            boost::nowide::cout << "\nContinue(Y/N) ? ";
-            char in;
-            boost::nowide::cin >> in;
-            if (in != 'Y' && in != 'y')
-                return true;
+            boost::nowide::cerr << "Post-processing scripts are ignored in this SLA-only build." << std::endl;
         }
     }
 
