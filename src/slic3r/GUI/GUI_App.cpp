@@ -1616,8 +1616,8 @@ bool GUI_App::on_init_inner()
     if (is_gcode_viewer()) {
         mainframe->update_layout();
         if (plater_ != nullptr)
-            // ensure the selected technology is ptFFF
-            plater_->set_printer_technology(ptFFF);
+            // ensure the selected technology is ptSLA
+            plater_->set_printer_technology(ptSLA);
     }
     else
         load_current_presets();

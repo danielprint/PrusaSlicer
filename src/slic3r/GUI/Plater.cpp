@@ -271,7 +271,7 @@ struct Plater::priv
     std::vector<std::unique_ptr<Slic3r::Print>>     fff_prints;
     std::vector<std::unique_ptr<Slic3r::SLAPrint>> sla_prints;
     Slic3r::Model               model;
-    PrinterTechnology           printer_technology = ptFFF;
+    PrinterTechnology           printer_technology = ptSLA;
     std::vector<Slic3r::GCodeProcessorResult> gcode_results;
 
     // GUI elements
