@@ -532,7 +532,7 @@ public:
 	size_t		m_sys_extruders_count;
 	size_t		m_cache_extruder_count = 0;
 
-    PrinterTechnology               m_printer_technology = ptFFF;
+    PrinterTechnology               m_printer_technology = ptSLA;
 
     TabPrinter(wxBookCtrlBase* parent) :
         Tab(parent, _L("Printers"), Slic3r::Preset::TYPE_PRINTER) {}

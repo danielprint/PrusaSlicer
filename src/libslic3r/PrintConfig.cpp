@@ -5507,7 +5507,7 @@ std::string DynamicPrintConfig::validate()
 {
     // Full print config is initialized from the defaults.
     const ConfigOption *opt = this->option("printer_technology", false);
-    auto printer_technology = (opt == nullptr) ? ptFFF : static_cast<PrinterTechnology>(dynamic_cast<const ConfigOptionEnumGeneric*>(opt)->value);
+    auto printer_technology = (opt == nullptr) ? ptSLA : static_cast<PrinterTechnology>(dynamic_cast<const ConfigOptionEnumGeneric*>(opt)->value);
     switch (printer_technology) {
     case ptFFF:
     {

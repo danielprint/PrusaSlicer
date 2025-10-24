@@ -43,7 +43,7 @@ PrintHost::~PrintHost() {}
 
 PrintHost* PrintHost::get_print_host(DynamicPrintConfig *config)
 {
-    PrinterTechnology tech = ptFFF;
+    PrinterTechnology tech = ptSLA;
 
     {
         const auto opt = config->option<ConfigOptionEnum<PrinterTechnology>>("printer_technology");

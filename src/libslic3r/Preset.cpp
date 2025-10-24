@@ -183,12 +183,12 @@ VendorProfile VendorProfile::from_ini(const ptree &tree, const boost::filesystem
             model.id = section.first.substr(printer_model_key.size());
             model.name = section.second.get<std::string>("name", model.id);
 
-            const char *technology_fallback = boost::algorithm::starts_with(model.id, "SL") ? "SLA" : "FFF";
+            const char *technology_fallback = "SLA";
 
             auto technology_field = section.second.get<std::string>("technology", technology_fallback);
             if (! ConfigOptionEnum<PrinterTechnology>::from_string(technology_field, model.technology)) {
                 BOOST_LOG_TRIVIAL(error) << boost::format("Vendor bundle: `%1%`: Invalid printer technology field: `%2%`") % id % technology_field;
-                model.technology = ptFFF;
+                model.technology = ptSLA;
             }
 
             model.family = section.second.get<std::string>("family", std::string());
@@ -1692,8 +1692,8 @@ std::string PresetCollection::path_from_name(const std::string &new_name) const
 
 const Preset& PrinterPresetCollection::default_preset_for(const DynamicPrintConfig &config) const
 {
-    const ConfigOptionEnumGeneric *opt_printer_technology = config.opt<ConfigOptionEnumGeneric>("printer_technology");
-    return this->default_preset((opt_printer_technology == nullptr || opt_printer_technology->value == ptFFF) ? 0 : 1);
+    (void)config;
+    return this->default_preset();
 }
 
 const Preset* PrinterPresetCollection::find_system_preset_by_model_and_variant(const std::string &model_id, const std::string& variant) const

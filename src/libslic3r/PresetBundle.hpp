@@ -52,8 +52,8 @@ public:
     PresetCollection            sla_prints;
     PresetCollection            filaments;
     PresetCollection            sla_materials;
-	PresetCollection& 			materials(PrinterTechnology pt)       { return pt == ptFFF ? this->filaments : this->sla_materials; }
-	const PresetCollection& 	materials(PrinterTechnology pt) const { return pt == ptFFF ? this->filaments : this->sla_materials; }
+	PresetCollection& 			materials(PrinterTechnology /*pt*/)       { return this->sla_materials; }
+	const PresetCollection& 	materials(PrinterTechnology /*pt*/) const { return this->sla_materials; }
     PrinterPresetCollection     printers;
     PhysicalPrinterCollection   physical_printers;
 
@@ -195,9 +195,7 @@ public:
 
     static const char *PRUSA_BUNDLE;
 
-    static std::array<Preset::Type, 3>  types_list(PrinterTechnology pt) {
-        if (pt == ptFFF)
-            return  { Preset::TYPE_PRINTER, Preset::TYPE_PRINT, Preset::TYPE_FILAMENT };
+    static std::array<Preset::Type, 3>  types_list(PrinterTechnology /*pt*/) {
         return      { Preset::TYPE_PRINTER, Preset::TYPE_SLA_PRINT, Preset::TYPE_SLA_MATERIAL };
     }
 

@@ -49,7 +49,7 @@ PresetBundle::PresetBundle() :
     filaments(Preset::TYPE_FILAMENT, Preset::filament_options(), static_cast<const PrintRegionConfig&>(FullPrintConfig::defaults())),
     sla_materials(Preset::TYPE_SLA_MATERIAL, Preset::sla_material_options(), static_cast<const SLAMaterialConfig&>(SLAFullPrintConfig::defaults())), 
     sla_prints(Preset::TYPE_SLA_PRINT, Preset::sla_print_options(), static_cast<const SLAPrintObjectConfig&>(SLAFullPrintConfig::defaults())),
-    printers(Preset::TYPE_PRINTER, Preset::printer_options(), static_cast<const PrintRegionConfig&>(FullPrintConfig::defaults()), "- default FFF -"),
+    printers(Preset::TYPE_PRINTER, Preset::printer_options(), static_cast<const PrintRegionConfig&>(FullPrintConfig::defaults()), "- default SLA -"),
     physical_printers(PhysicalPrinter::printer_options(), this)
 {
     // The following keys are handled by the UI, they do not have a counterpart in any StaticPrintConfig derived classes,
@@ -82,27 +82,19 @@ PresetBundle::PresetBundle() :
     this->sla_prints.default_preset().compatible_printers_condition();
     this->sla_prints.default_preset().inherits();
 
-    this->printers.add_default_preset(Preset::sla_printer_options(), static_cast<const SLAMaterialConfig&>(SLAFullPrintConfig::defaults()), "- default SLA -");
-    this->printers.preset(1).printer_technology_ref() = ptSLA;
-    for (size_t i = 0; i < 2; ++ i) {
-		// The following ugly switch is to avoid printers.preset(0) to return the edited instance, as the 0th default is the current one.
-		Preset &preset = this->printers.default_preset(i);
-        for (const char *key : { 
-            "printer_settings_id", "printer_vendor", "printer_model", "printer_variant", "thumbnails",
-            //FIXME the following keys are only created here for compatibility to be able to parse legacy Printer profiles.
-            // These keys are converted to Physical Printer profile. After the conversion, they shall be removed.
-            "host_type", "print_host", "printhost_apikey", "printhost_cafile"})
-            preset.config.optptr(key, true);
-        if (i == 0) {
-            preset.config.optptr("default_print_profile", true);
-            preset.config.option<ConfigOptionStrings>("default_filament_profile", true);
-        } else {
-            preset.config.optptr("default_sla_print_profile", true);
-            preset.config.optptr("default_sla_material_profile", true);
-        }
-        // default_sla_material_profile
-        preset.inherits();
-    }
+    Preset &sla_default = this->printers.default_preset();
+    sla_default.printer_technology_ref() = ptSLA;
+    for (const char *key : {
+        "printer_settings_id", "printer_vendor", "printer_model", "printer_variant", "thumbnails",
+        //FIXME the following keys are only created here for compatibility to be able to parse legacy Printer profiles.
+        // These keys are converted to Physical Printer profile. After the conversion, they shall be removed.
+        "host_type", "print_host", "printhost_apikey", "printhost_cafile"})
+        sla_default.config.optptr(key, true);
+    sla_default.config.optptr("default_print_profile", true);
+    sla_default.config.option<ConfigOptionStrings>("default_filament_profile", true);
+    sla_default.config.optptr("default_sla_print_profile", true);
+    sla_default.config.optptr("default_sla_material_profile", true);
+    sla_default.inherits();
 
     // Re-activate the default presets, so their "edited" preset copies will be updated with the additional configuration values above.
     this->prints       .select_preset(0);
@@ -455,8 +447,13 @@ static inline std::string remove_ini_suffix(const std::string &name)
 void PresetBundle::load_installed_printers(const AppConfig &config)
 {
 	this->update_system_maps();
-    for (auto &preset : printers)
+    for (auto &preset : printers) {
+        if (preset.printer_technology() != ptSLA) {
+            preset.is_visible = false;
+            continue;
+        }
         preset.set_visible_from_appconfig(config);
+    }
 }
 
 void PresetBundle::cache_extruder_filaments_names()
@@ -672,6 +669,16 @@ void PresetBundle::load_selections(AppConfig &config, const PresetPreferences& p
     const Preset *preferred_printer = printers.find_system_preset_by_model_and_variant(preferred_selection.printer_model_id, preferred_selection.printer_variant);
     printers.select_preset_by_name(preferred_printer ? preferred_printer->name : initial_printer_profile_name, true);
 
+    if (printers.get_selected_preset().printer_technology() != ptSLA) {
+        for (size_t i = 0; i < printers.size(); ++i) {
+            const Preset &candidate = printers.preset(i, false);
+            if (candidate.printer_technology() == ptSLA && candidate.is_visible) {
+                printers.select_preset(i);
+                break;
+            }
+        }
+    }
+
     // Selects the profile, leaves it to -1 if the initial profile name is empty or if it was not found.
     prints.select_preset_by_name_strict(initial_print_profile_name);
     filaments.select_preset_by_name_strict(initial_filament_profile_name);
@@ -873,7 +880,7 @@ DynamicPrintConfig PresetBundle::full_fff_config() const
     add_if_some_non_empty(std::move(compatible_prints_condition),   "compatible_prints_condition_cummulative");
     add_if_some_non_empty(std::move(inherits),                      "inherits_cummulative");
 
-	out.option<ConfigOptionEnumGeneric>("printer_technology", true)->value = ptFFF;
+        out.option<ConfigOptionEnumGeneric>("printer_technology", true)->value = ptSLA;
     return out;
 }
 

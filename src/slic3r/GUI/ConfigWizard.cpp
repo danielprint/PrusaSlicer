@@ -2820,18 +2820,12 @@ ConfigWizard::priv::Repository* ConfigWizard::priv::get_repo(const std::string& 
 
 void ConfigWizard::priv::create_vendor_printers_page(const std::string& repo_id, const VendorProfile* vendor, bool install/* = false*/, bool from_single_vendor_repo /*= false*/)
 {
-    bool is_fff_technology = false;
     bool is_sla_technology = false;
 
     for (auto& model: vendor->models)
     {
-        if (!is_fff_technology && model.technology == ptFFF)
-            is_fff_technology = true;
         if (!is_sla_technology && model.technology == ptSLA)
             is_sla_technology = true;
-
-        if (is_fff_technology && is_sla_technology)
-            break;
     }
 
     PagePrinters* pageFFF = nullptr;
@@ -2840,16 +2834,7 @@ void ConfigWizard::priv::create_vendor_printers_page(const std::string& repo_id,
     const bool is_prusa_vendor = vendor->name.find("Prusa") != std::string::npos;
     const unsigned indent = from_single_vendor_repo ? 0 : 1;
 
-    if (is_fff_technology) 
-    {
-        pageFFF = new PagePrinters(q, vendor->name + " " +_L("FFF Technology Printers"), vendor->name + (is_prusa_vendor ? "" : " FFF"), *vendor, indent, T_FFF);
-        pageFFF->install = install;
-        if (only_sla_mode)
-            only_sla_mode = false;
-        add_page(pageFFF);
-    }
-
-    if (is_sla_technology) 
+    if (is_sla_technology)
     {
         pageSLA = new PagePrinters(q, vendor->name + " " + _L("SLA Technology Printers"), vendor->name + (is_prusa_vendor ? "" : " MLSA"), *vendor, indent, T_SLA);
         pageSLA->install = install;

@@ -1281,7 +1281,7 @@ void GLCanvas3D::SLAView::select_full_instance(const GLVolume::CompositeID& id)
 
 PrinterTechnology GLCanvas3D::current_printer_technology() const
 {
-    return m_process ? m_process->current_printer_technology() : ptFFF;
+    return m_process ? m_process->current_printer_technology() : ptSLA;
 }
 
 bool GLCanvas3D::is_arrange_alignment_enabled() const
